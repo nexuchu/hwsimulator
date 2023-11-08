@@ -3,6 +3,7 @@ from pygame.locals import *
 import socket
 import os
 
+
 if getattr(sys, 'frozen', False):
    program_directory = os.path.dirname(os.path.abspath(sys.executable))
    ENV = "PROD" # Run in .exe File. Assume it's a production environment.
@@ -48,31 +49,58 @@ class Button:
         }
         objects.append(self)
         self.last_press_time = 0
+        self.visible = True
+        self.clickable = True
     def process(self):
         mousePos = pygame.mouse.get_pos()
         self.buttonSurface.fill(self.fillColors['normal'])
-        if self.buttonRect.collidepoint(mousePos):
-            self.buttonSurface.fill(self.fillColors['hover'])
-            if pygame.mouse.get_pressed(num_buttons=3)[0]:
-                current_time = pygame.time.get_ticks()
-                if current_time - self.last_press_time > 500:
-                    self.last_press_time = current_time
-                    self.buttonSurface.fill(self.fillColors['pressed'])
-                    if self.onePress:
-                        self.onclickFunction()
-                    elif not self.alreadyPressed:
-                        self.onclickFunction()
-                        self.alreadyPressed = True
-                else:
-                    self.alreadyPressed = False
-        self.buttonSurface.blit(self.buttonSurf, [
-            self.buttonRect.width/2 - self.buttonSurf.get_rect().width/2,
-            self.buttonRect.height/2 - self.buttonSurf.get_rect().height/2
-        ])
-        screen.blit(self.buttonSurface, self.buttonRect)
+        if self.clickable:
+            if self.buttonRect.collidepoint(mousePos):
+                self.buttonSurface.fill(self.fillColors['hover'])
+                if pygame.mouse.get_pressed(num_buttons=3)[0]:
+                    current_time = pygame.time.get_ticks()
+                    if current_time - self.last_press_time > 500:
+                        self.last_press_time = current_time
+                        self.buttonSurface.fill(self.fillColors['pressed'])
+                        if self.onePress:
+                            self.onclickFunction()
+                        elif not self.alreadyPressed:
+                            self.onclickFunction()
+                            self.alreadyPressed = True
+                    else:
+                        self.alreadyPressed = False
+            self.buttonSurface.blit(self.buttonSurf, [
+                self.buttonRect.width/2 - self.buttonSurf.get_rect().width/2,
+                self.buttonRect.height/2 - self.buttonSurf.get_rect().height/2
+            ])
+            if self.visible:
+                screen.blit(self.buttonSurface, self.buttonRect)
+    def hide(self):
+        self.visible = False
+        self.clickable = False
 
 
 
+class RightArrow(pygame.sprite.Sprite):
+    def __init__(self):
+        super().__init__()
+        self.image = pygame.image.load('arrow.png').convert_alpha()
+        self.image = pygame.transform.scale(self.image, (154/2.2, 221/2.2))     
+        self.rect = self.image.get_rect()
+        screen_center_x = screen.get_width() / 2
+        screen_center_y = screen.get_height() / 2
+        self.rect.center = (screen_center_x+175, screen_center_y-100)
+    def click(self):
+        global bg
+        cursor_rect = cursor.rect
+        if cursor_rect.colliderect(self.rect):
+            egg.kill()
+            pan.kill()
+            egg.is_alive = False
+            for obj in objects:
+                if isinstance(obj, Button):
+                    obj.hide()
+            bg = pygame.image.load("bluebackground.jpg")
 
 class Cursor(pygame.sprite.Sprite):
     def __init__(self):
@@ -100,6 +128,7 @@ class Pan(pygame.sprite.Sprite):
 class Egg(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
+        self.is_alive = True
         self.egg_image = pygame.image.load('egg.png').convert_alpha()
         self.side2_image = pygame.image.load('side2.png').convert_alpha()
         self.image = self.egg_image
@@ -113,17 +142,18 @@ class Egg(pygame.sprite.Sprite):
     def update(self):
         cursor_rect = cursor.rect
         pan_rect = pan.rect 
-        if cursor_rect.colliderect(pan_rect):
-            if self.current_image == 'egg.png':
-                self.image = self.side2_image
-                self.image = pygame.transform.scale(self.image, (460 // 3, 382 // 3))
-                self.current_image = 'side2.png'
-                self.sound.play()
-            else:
-                self.image = self.egg_image
-                self.image = pygame.transform.scale(self.image, (460 // 3.25, 382 // 3))
-                self.current_image = 'egg.png'
-                self.sound.play()
+        if self.is_alive:
+            if cursor_rect.colliderect(pan_rect):
+                if self.current_image == 'egg.png':
+                    self.image = self.side2_image
+                    self.image = pygame.transform.scale(self.image, (460 // 3, 382 // 3))
+                    self.current_image = 'side2.png'
+                    self.sound.play()
+                else:
+                    self.image = self.egg_image
+                    self.image = pygame.transform.scale(self.image, (460 // 3.25, 382 // 3))
+                    self.current_image = 'egg.png'
+                    self.sound.play()
 
 
 def spawn():
@@ -155,6 +185,10 @@ egg = Egg()
 egg_group = pygame.sprite.Group()
 egg_group.add(egg)
 
+arrow = RightArrow()
+arrow_group = pygame.sprite.Group()
+arrow_group.add(arrow)
+
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -166,6 +200,7 @@ while running:
             running = False
         if event.type == pygame.MOUSEBUTTONDOWN:
             egg.update()
+            arrow.click()
 
 
     screen.blit(bg, (0, 0))
@@ -173,6 +208,7 @@ while running:
         object.process()
     pan_group.draw(screen)
     egg_group.draw(screen)
+    arrow_group.draw(screen)
     cursor_group.draw(screen)
     cursor_group.update()
 
@@ -188,6 +224,6 @@ while running:
     if readymade > 100 or readymade == 100:
         screen.blit(readymadetext, (screen.get_width() / 2-45, 650))
     pygame.display.flip()
-
+    pygame.display.set_caption(f'Housewife Simulator 23 : Points: {readymade}')
     dt = clock.tick(60) / 1000
 pygame.quit()
