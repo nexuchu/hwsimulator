@@ -249,6 +249,19 @@ class Maingame:
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 egg.update()
+                arrow_rect = arrow.rect
+                cursor_rect = cursor.rect
+                if cursor_rect.colliderect(arrow_rect):
+                    game_state.state = 'intro'
+                    cookbutton.visible = True
+                    cookbutton.clickable = True
+                    cleanbutton.visible = True
+                    cleanbutton.clickable = True
+                    leaderboardbutton.visible = True
+                    leaderboardbutton.clickable = True
+                    pygame.mixer.music.load("loading.wav")
+                    pygame.mixer.music.play(10, 0.0)
+                    pygame.mixer.music.set_volume(0.2)
 
 
         screen.blit(bg, (0, 0))
@@ -256,6 +269,7 @@ class Maingame:
             object.process()
         pan_group.draw(screen)
         egg_group.draw(screen)
+        arrow_group.draw(screen)
         cursor_group.draw(screen)
         cursor.image = pygame.image.load('cursor.png').convert_alpha()   
         cursor.rect = cursor.image.get_rect()
