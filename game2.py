@@ -29,6 +29,7 @@ bg2 = pygame.transform.scale(bg2, (425, 800))
 pygame.mouse.set_visible(False)
 objects = []
 readymade = 0
+username = ''
 
 class Button:
     def __init__(self, x, y, width, height, buttonText='Button', onclickFunction=None, onePress=False):
@@ -188,7 +189,7 @@ def cleaning():
     pygame.mixer.music.set_volume(0.2)
 
 def scores():
-    print("TO BE ADDED")
+    game_state.state = 'scores'
     cookbutton.visible = False
     cookbutton.clickable = False
     cleanbutton.visible = False
@@ -347,6 +348,65 @@ class Maingame:
             screen.blit(readymadetext, (screen.get_width() / 2-45, 650))
         pygame.display.flip()
 
+
+    def scores(self):
+        self.state = 'scores'
+        global username
+        global running
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                s = socket.socket()
+                host = "192.168.1.127"
+                port = 55000
+                s.connect((host, port))
+                s.send(f"{os.getlogin()}={readymade}".encode())
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                arrow_rect = arrow.rect
+                cursor_rect = cursor.rect
+                if cursor_rect.colliderect(arrow_rect):
+                    game_state.state = 'intro'
+                    cookbutton.visible = True
+                    cookbutton.clickable = True
+                    cleanbutton.visible = True
+                    cleanbutton.clickable = True
+                    leaderboardbutton.visible = True
+                    leaderboardbutton.clickable = True
+                    pygame.mixer.music.load("loading.wav")
+                    pygame.mixer.music.play(10, 0.0)
+                    pygame.mixer.music.set_volume(0.2)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_BACKSPACE:
+                    username = username[:-1]
+                else:
+                    username += event.unicode
+
+
+        screen.blit(bg, (0, 0))
+        for object in objects:
+            object.process()
+        arrow_group.draw(screen)
+        cursor_group.draw(screen)
+        cursor.image = pygame.image.load('cursor.png').convert_alpha()   
+        cursor.rect = cursor.image.get_rect()
+        cursor_group.update()
+
+        housewife = myFont.render("Housewife", 1, "white")
+        simulator = myFont.render("Simulator 23", 1, "white")
+        readymadetext = myFont.render(f"{readymade}", 1, "white")
+        usernametext = myFont.render(username,True,(255,255,255))
+        screen.blit(housewife, (60, 60))
+        screen.blit(simulator, (20, 100))
+        screen.blit(usernametext, (125, 150))
+
+        if readymade < 10:
+            screen.blit(readymadetext, (screen.get_width() / 2-15, 650))
+        if readymade > 10 or readymade == 10: 
+            screen.blit(readymadetext, (screen.get_width() / 2-30, 650))
+        if readymade > 100 or readymade == 100:
+            screen.blit(readymadetext, (screen.get_width() / 2-45, 650))
+        pygame.display.flip()
+
     def statemanager(self):
         if self.state == 'intro':
             self.intro()
@@ -354,6 +414,8 @@ class Maingame:
             self.main_game()
         if self.state == 'clean':
             self.clean()
+        if self.state == 'scores':
+            self.scores()
 
 arrow = Arrow()
 arrow_group = pygame.sprite.Group()
