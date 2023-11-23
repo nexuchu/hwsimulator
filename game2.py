@@ -3,6 +3,7 @@ from pygame.locals import *
 import socket
 import os
 import random
+import sys
 
 if getattr(sys, 'frozen', False):
    program_directory = os.path.dirname(os.path.abspath(sys.executable))
@@ -30,6 +31,33 @@ pygame.mouse.set_visible(False)
 objects = []
 readymade = 0
 username = ''
+
+def read_scores():
+    s = socket.socket()
+    host = "192.168.1.127"
+    port = 55000
+    s.connect((host, port))
+    s.send(f"REQ=GETSCORES".encode())
+    scores = s.recv(4098).decode()
+    scores = scores.split("#")
+    print(scores)
+    del scores[-1]
+    s.close()
+    # return scores
+    return ["Diora:12"]
+
+def post_scores(username, readymade):
+    s = socket.socket()
+    host = "192.168.1.127"
+    port = 55000
+    s.connect((host, port))
+    s.send(f"REQ=POSTSCORES+{username}+{readymade}".encode())
+    s.close()
+
+scorelol = read_scores()
+if scorelol is not None:
+    scorelol.sort(key=lambda x: x[1], reverse=True)
+
 
 class Button:
     def __init__(self, x, y, width, height, buttonText='Button', onclickFunction=None, onePress=False):
@@ -212,11 +240,7 @@ class Maingame:
         global running
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                s = socket.socket()
-                host = "192.168.1.127"
-                port = 55000
-                s.connect((host, port))
-                s.send(f"{os.getlogin()}={readymade}".encode())
+                post_scores(username, readymade)
                 running = False
 
 
@@ -246,7 +270,7 @@ class Maingame:
                 host = "192.168.1.127"
                 port = 55000
                 s.connect((host, port))
-                s.send(f"{os.getlogin()}={readymade}".encode())
+                s.send(f"{username}={readymade}".encode())
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 egg.update()
@@ -296,11 +320,7 @@ class Maingame:
         global readymade
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                s = socket.socket()
-                host = "192.168.1.127"
-                port = 55000
-                s.connect((host, port))
-                s.send(f"{os.getlogin()}={readymade}".encode())
+                post_scores(username, readymade)
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 cursor_rect = cursor.rect
@@ -355,11 +375,7 @@ class Maingame:
         global running
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                s = socket.socket()
-                host = "192.168.1.127"
-                port = 55000
-                s.connect((host, port))
-                s.send(f"{os.getlogin()}={readymade}".encode())
+                post_scores(username, readymade)
                 running = False
             if event.type == pygame.MOUSEBUTTONDOWN:
                 arrow_rect = arrow.rect
@@ -379,25 +395,35 @@ class Maingame:
                 if event.key == pygame.K_BACKSPACE:
                     username = username[:-1]
                 else:
-                    username += event.unicode
+                    if len(username) < 5:
+                        username += event.unicode
 
 
         screen.blit(bg, (0, 0))
-        for object in objects:
-            object.process()
         arrow_group.draw(screen)
         cursor_group.draw(screen)
         cursor.image = pygame.image.load('cursor.png').convert_alpha()   
         cursor.rect = cursor.image.get_rect()
         cursor_group.update()
 
+        scoretextfont = pygame.font.Font("ambitsek.ttf", 30)
+        tutotextfont = pygame.font.Font("ambitsek.ttf", 17)
         housewife = myFont.render("Housewife", 1, "white")
         simulator = myFont.render("Simulator 23", 1, "white")
         readymadetext = myFont.render(f"{readymade}", 1, "white")
         usernametext = myFont.render(username,True,(255,255,255))
+        tutotext = tutotextfont.render("Start typing your username", 1, "white")
+        tutotext2 = tutotextfont.render("it will be saved automatically!", 1, "white")
         screen.blit(housewife, (60, 60))
         screen.blit(simulator, (20, 100))
-        screen.blit(usernametext, (125, 150))
+        screen.blit(usernametext, (125, 175))
+        screen.blit(tutotext, (27, 250))
+        screen.blit(tutotext2, (14, 270))
+        y_position = 350
+        for i, (name, scorex) in enumerate(scorelol[:5]):
+            score_text = scoretextfont.render(f"{i + 1}. {name}: {scorex}", 1, "white")
+            screen.blit(score_text, (10, y_position))
+            y_position += 30
 
         if readymade < 10:
             screen.blit(readymadetext, (screen.get_width() / 2-15, 650))

@@ -1,0 +1,4 @@
+diora : 11
+hallo : 12
+iamtired : 23
+haha : 69
