@@ -5,7 +5,7 @@ import os
 import random
 import sys
 
-HOST = "192.168.1.127"
+HOST = socket.gethostbyname("xcloud.ddns.net")
 PORT = 55000
 
 if getattr(sys, 'frozen', False):
@@ -78,12 +78,15 @@ def post_scores(username, readymade):
         host = HOST
         port = PORT
         s.connect((host, port))
-        s.send(f"REQ=POSTSCORES+{username}+{readymade}".encode())
+        if username != "" and readymade < 1:
+            s.send(f"REQ=POSTSCORES+{username}+{readymade}".encode())
+        elif readymade > 1 and username == "":
+            s.send(f"REQ=POSTSCORES+{os.getlogin()}+{readymade}".encode())
         s.close()
 
 scorelol = read_scores()
 if scorelol is not None:
-    scorelol.sort(key=lambda x: x[1], reverse=True)
+    scorelol.sort(key=lambda x: x[-1], reverse=True)
 
 
 class Button:
@@ -454,9 +457,10 @@ class Maingame:
                 element = element.split(":")
                 name = element[0]
                 scorex = element[1]
-                score_text = scoretextfont.render(f"{i + 1}. {name}: {scorex}", 1, "white")
-                screen.blit(score_text, (10, y_position))
-                y_position += 30
+                if name != "":
+                    score_text = scoretextfont.render(f"{i + 1}. {name}: {scorex}", 1, "white")
+                    screen.blit(score_text, (10, y_position))
+                    y_position += 30
         else:
             score_text = scoretextfont.render(f"No Connection", 1, "white")
             screen.blit(score_text, (44, y_position))
