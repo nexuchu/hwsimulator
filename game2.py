@@ -5,6 +5,9 @@ import os
 import random
 import sys
 
+HOST = "192.168.1.127"
+PORT = 55000
+
 if getattr(sys, 'frozen', False):
    program_directory = os.path.dirname(os.path.abspath(sys.executable))
    ENV = "PROD" # Run in .exe File. Assume it's a production environment.
@@ -32,27 +35,51 @@ objects = []
 readymade = 0
 username = ''
 
+def check_server_connection(): #avoids crash due to server not responding
+    try:
+        s = socket.socket()
+        host = HOST
+        port = PORT
+        s.connect((host, port))
+        s.send("REQ=CHECKCONN".encode())
+        reply = s.recv(256).decode()
+        if reply == "OK":
+            print("Server Connection Successful!")
+            s.close()
+            return True
+        else:
+            print("Could not connect to Server.")
+            return False
+    except socket.error as e:
+        print(f"A Socket Error occoured. Could not connect to Server. ({e})")
+        return False
+    except Exception as e:
+        print(f"Exception Occoured. Could not connect to Server. ({e})")
+
+
+
+
 def read_scores():
-    s = socket.socket()
-    host = "192.168.1.127"
-    port = 55000
-    s.connect((host, port))
-    s.send(f"REQ=GETSCORES".encode())
-    scores = s.recv(4098).decode()
-    scores = scores.split("#")
-    print(scores)
-    del scores[-1]
-    s.close()
-    # return scores
-    return ["Diora:12"]
+    if check_server_connection() == True:
+        s = socket.socket()
+        host = HOST
+        port = PORT
+        s.connect((host, port))
+        s.send(f"REQ=GETSCORES".encode())
+        scores = s.recv(4098).decode()
+        scores = scores.split("#")
+        del scores[-1]
+        s.close()
+        return scores
 
 def post_scores(username, readymade):
-    s = socket.socket()
-    host = "192.168.1.127"
-    port = 55000
-    s.connect((host, port))
-    s.send(f"REQ=POSTSCORES+{username}+{readymade}".encode())
-    s.close()
+    if check_server_connection() == True:
+        s = socket.socket()
+        host = HOST
+        port = PORT
+        s.connect((host, port))
+        s.send(f"REQ=POSTSCORES+{username}+{readymade}".encode())
+        s.close()
 
 scorelol = read_scores()
 if scorelol is not None:
@@ -402,7 +429,7 @@ class Maingame:
         screen.blit(bg, (0, 0))
         arrow_group.draw(screen)
         cursor_group.draw(screen)
-        cursor.image = pygame.image.load('cursor.png').convert_alpha()   
+        cursor.image = pygame.image.load('cursor.png').convert_alpha()
         cursor.rect = cursor.image.get_rect()
         cursor_group.update()
 
@@ -420,10 +447,19 @@ class Maingame:
         screen.blit(tutotext, (27, 250))
         screen.blit(tutotext2, (14, 270))
         y_position = 350
-        for i, (name, scorex) in enumerate(scorelol[:5]):
-            score_text = scoretextfont.render(f"{i + 1}. {name}: {scorex}", 1, "white")
-            screen.blit(score_text, (10, y_position))
-            y_position += 30
+
+        if scorelol != None: # scorelol will be none by default. If this is not changed via a successful connection, it will say that no connection could be established.
+            for i, element in enumerate(scorelol[:5]):
+                # Just take the List elements as a whole and split them up. ~iLollek
+                element = element.split(":")
+                name = element[0]
+                scorex = element[1]
+                score_text = scoretextfont.render(f"{i + 1}. {name}: {scorex}", 1, "white")
+                screen.blit(score_text, (10, y_position))
+                y_position += 30
+        else:
+            score_text = scoretextfont.render(f"No Connection", 1, "white")
+            screen.blit(score_text, (44, y_position))
 
         if readymade < 10:
             screen.blit(readymadetext, (screen.get_width() / 2-15, 650))
